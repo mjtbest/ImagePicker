@@ -11,4 +11,5 @@ import UIKit
 class CoustomTapGesture: UITapGestureRecognizer {
     var imgView: UIImageView?
     var oldImgView: UIImageView?
+    var maskView: UIView?
 }

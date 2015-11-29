@@ -128,7 +128,9 @@ class PhotoViewController: UIViewController, UIImagePickerControllerDelegate, UI
         let imgView = UIImageView()
         imgView.frame = CGRectMake(margin + (margin + cellImgViewWidth) * CGFloat(photoIndex % photoNumOfRow), margin + (margin + cellImgViewHeight) * CGFloat(photoIndex / photoNumOfRow), cellImgViewWidth, cellImgViewHeight)
         // 将裁减后的照片传给imageView
-        let scaledImg = self.scaleFromImage(editedImage!, size: CGSize(width: 375, height: 667))
+        let scaledWidth: CGFloat = (editedImage?.size.width > 800) ? 800 : (editedImage?.size.width)!
+        let scaledHeight: CGFloat = scaledWidth * (editedImage!.size.height / editedImage!.size.width)
+        let scaledImg = self.scaleFromImage(editedImage!, size: CGSize(width: scaledWidth, height: scaledHeight))
         imgView.image = scaledImg
         imgView.tag = photoIndex
         imgView.userInteractionEnabled = true
@@ -154,24 +156,33 @@ class PhotoViewController: UIViewController, UIImagePickerControllerDelegate, UI
     
     // 图片全屏的点击事件
     func showBigPhoto(sender: CoustomTapGesture) {
-        let imgView = sender.imgView
+        let orignImgView = sender.imgView
         let fullScreenView = UIImageView()
-        fullScreenView.image = imgView?.image
+        let maskView = UIView()
+        
+        maskView.backgroundColor = UIColor.blackColor()
+        fullScreenView.image = orignImgView?.image
+        maskView.addSubview(fullScreenView)
+        
         // 只有添加到self.view上才能实现全屏
-        self.view.addSubview(fullScreenView)
+        self.view.addSubview(maskView)
         // 实现自定义动画
         fullScreenView.userInteractionEnabled = true
         let tap = CoustomTapGesture(target: self, action: "recoveryPhoto:")
-        tap.oldImgView = imgView
+        tap.oldImgView = orignImgView
         tap.imgView = fullScreenView
+        tap.maskView = maskView
         fullScreenView.addGestureRecognizer(tap)
         // 全屏显示动画
-        fullScreenView.frame = imgView!.frame
-        fullScreenView.alpha = 0
+        maskView.frame = orignImgView!.frame
+        maskView.alpha = 0
         UIView.animateWithDuration(0.2, animations: { () -> Void in
-            fullScreenView.frame = self.view.frame
-            fullScreenView.alpha = 1
-            self.view.bringSubviewToFront(fullScreenView)
+            maskView.frame = self.view.frame
+            maskView.alpha = 1
+            let imgW: CGFloat = maskView.bounds.width
+            let imgH: CGFloat = imgW * orignImgView!.frame.height / orignImgView!.frame.width
+            fullScreenView.frame = CGRectMake(0, (maskView.bounds.height - imgH) / 2, imgW, imgH)
+            self.view.bringSubviewToFront(maskView)
         })
     }
     
@@ -179,6 +190,7 @@ class PhotoViewController: UIViewController, UIImagePickerControllerDelegate, UI
     func recoveryPhoto(sender: CoustomTapGesture) {
         let imgView = sender.oldImgView
         let fullScreenView = sender.imgView
+        let maskView = sender.maskView
         // 必须添加到原始的View上才能恢复原始位置
         self.scrollerViewPhoto.addSubview(fullScreenView!)
         // 实现自定义手势
@@ -188,6 +200,7 @@ class PhotoViewController: UIViewController, UIImagePickerControllerDelegate, UI
         fullScreenView!.addGestureRecognizer(tap)
         // 图片恢复动画
         UIView.animateWithDuration(0.1, animations: { () -> Void in
+            maskView?.removeFromSuperview()
             fullScreenView!.frame = imgView!.frame
         })
     }
